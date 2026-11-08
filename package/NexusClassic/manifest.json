@@ -1,0 +1,20 @@
+{
+  "name": "Nexus Classic (Android 2.1–2.2)",
+  "author": "The Android Open Source Project; xefensor",
+  "description": "Original Android 2.2 Nexus animation: 14-pixel pyramid grid and trails, with four-colour bursts on left click. Shared ambient and click pulses continue across monitors when Span all screens is enabled.",
+  "channels": {
+    "iChannel0": "Shaders/Retro/NexusClassic/assets/pyramid_background.png",
+    "iChannel1": "Shaders/Retro/NexusClassic/assets/pulse.png",
+    "iChannel2": "Shaders/Retro/NexusClassic/assets/glow.png",
+    "imageChannel0": 0,
+    "imageChannel1": 1,
+    "imageChannel2": 2,
+    "imageChannel3": 3
+  },
+  "buffers": {
+    "useBufferA": false,
+    "useBufferB": false,
+    "useBufferC": false,
+    "useBufferD": false
+  }
+}

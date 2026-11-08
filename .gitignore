@@ -1,0 +1,11 @@
+/build/
+/.cache/
+__pycache__/
+*.py[cod]
+*.so
+*.so.*
+*.o
+CMakeCache.txt
+CMakeFiles/
+Testing/
+*.user

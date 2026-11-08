@@ -1,0 +1,108 @@
+import QtQuick
+import QtTest
+import "@HOST_UI@/shaderwallpaper" as Native
+import "@PACKAGE@/interaction" as Nexus
+import "@HOST_UI@/ShaderApply.js" as ShaderApply
+
+Item {
+    id: scene
+    width: 1000
+    height: 400
+    property string path: "@PACKAGE@/main.frag"
+    Native.ShaderEngine {
+        id: left
+        width: 500; height: 400
+        running: true; targetFps: 60
+        desktopResolution: Qt.vector2d(1000 * devicePixelRatio, 400 * devicePixelRatio)
+        imageChannels: [0, 1, 2, -1]
+    }
+    Native.ShaderEngine {
+        id: right
+        x: 500; width: 500; height: 400
+        running: true; targetFps: 60
+        screenOffset: Qt.vector2d(500 * devicePixelRatio, 0)
+        desktopResolution: Qt.vector2d(1000 * devicePixelRatio, 400 * devicePixelRatio)
+        imageChannels: [0, 1, 2, -1]
+    }
+    Nexus.NexusBridge { id: leftInput; engine: left; shared: true }
+    Nexus.NexusBridge { id: rightInput; engine: right; shared: true }
+    Nexus.NexusBootstrap { }
+    TestCase {
+        name: "NexusNativeInteraction"
+        when: windowShown
+        function test_clicksAcrossRenderedMonitorCrops() {
+            const lib = Native.ShaderLibrarySingleton
+            const map = ShaderApply.forPath(lib, scene.path, {})
+            verify(map.mouseEnabled, "The shader declares mouse input")
+            compare(map.imageChannel3, 3)
+            for (const engine of [left, right]) {
+                for (let i = 0; i < 3; i++) {
+                    engine["iChannel" + i] = map["iChannel" + i]
+                    engine["iChannel" + i + "Enabled"] = true
+                }
+                engine.shaderSource = scene.path
+                engine.mouseEnabled = map.mouseEnabled
+                engine.screenCount = 2
+            }
+            tryVerify(function() { return left.iFrame > 1 && right.iFrame > 1 }, 6000)
+            verify(!left.hasError && !right.hasError)
+            verify(!left.compileFailed && !right.compileFailed)
+            tryVerify(function() { return leftInput.textureUrl.toString().length > 0 })
+            compare(leftInput.textureUrl, rightInput.textureUrl)
+            verify(left.iChannel3Enabled && right.iChannel3Enabled)
+            compare(left.imageChannels[3], 3)
+            compare(right.imageChannels[3], 3)
+            compare(leftInput.extraCount, 0)
+            mouseClick(left, 490, 200, Qt.LeftButton)
+            compare(leftInput.extraCount, 4)
+            compare(rightInput.extraCount, 4)
+            compare(leftInput.textureUrl, rightInput.textureUrl)
+            wait(250)
+            verify(!left.compileFailed && !right.compileFailed)
+            const image = grabImage(scene)
+            image.save("@ARTIFACT_DIR@/nexus-classic-native-click.png")
+            mouseClick(right, 20, 100, Qt.LeftButton)
+            compare(leftInput.extraCount, 8)
+            compare(rightInput.extraCount, 8)
+            mousePress(left, 100, 100, Qt.LeftButton)
+            wait(100)
+            compare(leftInput.extraCount, 8)
+            mouseRelease(left, 100, 100, Qt.LeftButton)
+            compare(leftInput.extraCount, 12)
+            mouseClick(left, 100, 100, Qt.RightButton)
+            compare(leftInput.extraCount, 12)
+            mousePress(left, 100, 100, Qt.LeftButton)
+            mouseMove(left, 300, 200, 30, Qt.LeftButton)
+            mouseRelease(left, 300, 200, Qt.LeftButton)
+            compare(leftInput.extraCount, 12)
+            console.log("Native click validation: two rendered crops; shared bursts; hold/drag/right-click ignored")
+
+            // Remove the direct bridge to simulate Plasma's cached, older
+            // ShaderSystem. The runtime must attach to the existing engines.
+            leftInput.detach()
+            rightInput.detach()
+            compare(left.iChannel3Enabled, false)
+            compare(right.iChannel3Enabled, false)
+            compare(left.imageChannels[3], -1)
+            compare(right.imageChannels[3], -1)
+            leftInput.engine = null
+            rightInput.engine = null
+            wait(1200)
+            tryVerify(function() { return left.iChannel3Enabled && right.iChannel3Enabled })
+            compare(left.iChannel3, right.iChannel3)
+            const previousState = left.iChannel3.toString()
+            mouseClick(left, 490, 200, Qt.LeftButton)
+            tryVerify(function() { return left.iChannel3.toString() !== previousState })
+            compare(left.iChannel3, right.iChannel3)
+            wait(250)
+            grabImage(scene).save("@ARTIFACT_DIR@/nexus-classic-runtime-click.png")
+            verify(!left.hasError && !right.hasError && !left.compileFailed && !right.compileFailed)
+            left.shaderSource = "@HOST_UI@/Shaders/CrumpledWave.frag"
+            tryVerify(function() { return !left.iChannel3Enabled })
+            left.shaderSource = scene.path
+            tryVerify(function() { return left.iChannel3Enabled })
+            tryVerify(function() { return left.iChannel3.toString().length > 0 && left.iChannel3.toString() === right.iChannel3.toString() })
+            console.log("Runtime validation: existing engines attached, click shared, old channel bindings restored on shader change")
+        }
+    }
+}

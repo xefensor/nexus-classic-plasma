@@ -1,0 +1,49 @@
+import QtQuick
+import QtTest
+import "@HOST_UI@/shaderwallpaper" as Native
+import "@PACKAGE@/interaction" as Nexus
+
+Item {
+    width: 500; height: 400
+    property bool watchPreference: false
+    Native.ShaderEngine {
+        id: engine
+        anchors.fill: parent
+        running: true; targetFps: 30
+        watchSourceFile: parent.watchPreference
+    }
+    Loader {
+        id: bridgeLoader
+        active: false
+        source: "@PACKAGE@/interaction/NexusBridge.qml"
+        onLoaded: item.engine = engine
+    }
+    TestCase {
+        name: "NexusCachedShaderRefresh"
+        when: windowShown
+        function test_refreshWithoutChangingSelectionOrWatchPreference() {
+            const lib = Native.ShaderLibrarySingleton
+            const path = "@CACHE_TEST@"
+            const oldCode = "// cached-red\nvoid mainImage(out vec4 c, in vec2 p) { c=vec4(1,0,0,1); }"
+            const newCode = "// fresh-green\nvoid mainImage(out vec4 c, in vec2 p) { c=vec4(0,1,0,1); }"
+            verify(lib.saveShaderCode(path, oldCode))
+            engine.shaderSource = path
+            tryVerify(function() { return engine.iFrame > 0 })
+            verify(engine.shaderCode.indexOf("cached-red") >= 0)
+            verify(!engine.watchSourceFile)
+            verify(lib.saveShaderCode(path, newCode))
+            wait(20)
+            verify(engine.shaderCode.indexOf("cached-red") >= 0)
+            bridgeLoader.active = true
+            tryVerify(function() { return engine.shaderCode.indexOf("fresh-green") >= 0 }, 3000)
+            tryVerify(function() { return !engine.watchSourceFile }, 3000)
+            compare(engine.shaderSource.toString(), path)
+            verify(!engine.hasError && !engine.compileFailed)
+            parent.watchPreference = true
+            compare(engine.watchSourceFile, true)
+            parent.watchPreference = false
+            compare(engine.watchSourceFile, false)
+            console.log("Cached shader refresh: new code loaded; source URL and watch-preference binding preserved")
+        }
+    }
+}

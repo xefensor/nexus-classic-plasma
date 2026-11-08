@@ -1,0 +1,31 @@
+cmake_minimum_required(VERSION 3.22)
+project(nexusclassicinput LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_AUTOMOC ON)
+find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Qml Quick)
+set(NEXUS_PLUGIN_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/qml" CACHE PATH
+    "Directory containing the built Nexus QML module")
+
+add_library(nexusmodel STATIC src/nexusmodel.cpp)
+set_target_properties(nexusmodel PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(nexusmodel PUBLIC Qt6::Core Qt6::Gui)
+target_include_directories(nexusmodel PUBLIC src)
+
+add_library(nexusinput MODULE src/nexusinput.cpp src/plugin.cpp)
+target_link_libraries(nexusinput PRIVATE nexusmodel Qt6::Qml Qt6::Quick)
+set_target_properties(nexusinput PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${NEXUS_PLUGIN_OUTPUT_DIRECTORY}")
+foreach(qml_file qmldir NexusBridge.qml NexusBootstrap.qml)
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${qml_file}"
+        "${NEXUS_PLUGIN_OUTPUT_DIRECTORY}/${qml_file}" COPYONLY)
+endforeach()
+
+include(CTest)
+add_executable(nexus_snapshot src/snapshot.cpp)
+target_link_libraries(nexus_snapshot PRIVATE nexusmodel)
+if(BUILD_TESTING)
+    find_package(Qt6 6.6 REQUIRED COMPONENTS Test)
+    add_executable(tst_nexus src/tst_nexus.cpp src/nexusinput.cpp)
+    target_link_libraries(tst_nexus PRIVATE nexusmodel Qt6::Quick Qt6::Test)
+    add_test(NAME nexus_behaviour COMMAND tst_nexus)
+    set_tests_properties(nexus_behaviour PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
+endif()

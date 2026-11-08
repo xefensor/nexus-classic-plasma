@@ -1,0 +1,43 @@
+Nexus Classic — Plasma shader adaptation of the Android 2.1–2.2 wallpaper.
+
+Original Nexus wallpaper, textures and pulse parameters:
+Copyright (C) 2009 The Android Open Source Project.
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Original source, tag android-2.2_r1:
+https://android.googlesource.com/platform/packages/wallpapers/Basic/+/android-2.2_r1/
+Commit: 0e5bf9291034aaf2a7ae8ae82de5a8a7024435ff
+
+Assets copied unchanged from res/drawable-hdpi:
+  pyramid_background.png
+  pulse.png
+  glow.png
+
+Changes in this adaptation:
+  RenderScript drawing replaced by GLSL; a small Qt input/model companion
+  shares the same pulse state across Plasma's per-monitor renderers.
+  The original 14-pixel cells/trails use Qt logical pixels on the desktop.
+  Original pyramid detail and baked broad lighting come from the AOSP PNG.
+  20 ambient pulses enter from random edges, change speed by +/-30%, and
+  restart in a new direction/colour after their entire tail exits, with a
+  random delay of up to two seconds. There is no fixed animation loop.
+  A left-click release snaps to the grid and emits four different colours
+  in the original directions at 300 pixels/second, using the original pool
+  of 40 extra pulses. Existing bursts survive new clicks while slots last.
+  Holding, dragging and right-clicking do not emit additional bursts.
+  Android launcher icon-drop commands have no desktop equivalent here;
+  the original tap interaction is mapped to left clicks.
+  A fallback ambient preview remains available without the input companion.
+
+Source comparison: Android 2.1_r2 and Android 2.2_r1 use the same pulse and
+tap behaviour. Android 2.2 changed blend alpha to 0.8 and slightly adjusted
+green/blue; this port uses that Android 2.2 palette and blend behaviour.
+
+The companion sources and focused checks are in interaction/.
+The repository installer adds small hooks to the user-installed
+ShaderSystem.qml and ShaderApply.js. The installer preserves backups under
+the user's XDG state directory; see the repository README for details.
+
+In Shader Wallpaper, choose this shader on both monitors and enable
+Advanced > Experimental > Span all screens on each monitor.
+Playback speed follows wall-clock time to keep independent renderers aligned.

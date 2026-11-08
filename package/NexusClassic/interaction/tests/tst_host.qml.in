@@ -1,0 +1,129 @@
+import QtQuick
+import QtTest
+import "@HOST_UI@" as Wallpaper
+import "@HOST_UI@/shaderwallpaper" as Native
+import "@PACKAGE@/interaction" as Nexus
+import "@HOST_UI@/ShaderApply.js" as ShaderApply
+
+Item {
+    width: 1000; height: 400
+    function i18n(text) { return text }
+    QtObject {
+        id: config
+        signal valueChanged()
+        property string selectedShaderPath: "Shaders/PS3_MenuColor.frag"
+        property string selectedShaderCode: ""
+        property int configVersion: 2
+        property int selectedShaderIndex: 0
+        property bool running: true
+        property real shaderSpeed: 1.0
+        property int targetFps: 60
+        property real resolutionScale: 1.0
+        property int pauseMode: 0
+        property bool showPauseIndicator: false
+        property bool checkActiveScreen: true
+        property var excludeWindows: []
+        property bool mouseEnabled: false
+        property real mouseBias: 1.0
+        property bool audioEnabled: false
+        property int audioChannel: 0
+        property real audioSensitivity: 40.0
+        property bool windowsEnabled: false
+        property string iChannel0: ""
+        property bool iChannel0Enabled: false
+        property string iChannel1: ""
+        property bool iChannel1Enabled: false
+        property string iChannel2: ""
+        property bool iChannel2Enabled: false
+        property string iChannel3: ""
+        property bool iChannel3Enabled: false
+        property bool useBufferA: false
+        property bool useBufferB: false
+        property bool useBufferC: false
+        property bool useBufferD: false
+        property string commonCode: ""
+        property string bufferACode: ""
+        property string bufferBCode: ""
+        property string bufferCCode: ""
+        property string bufferDCode: ""
+        property int imageChannel0: 0
+        property int imageChannel1: 1
+        property int imageChannel2: 2
+        property int imageChannel3: 3
+        property int bufferAChannel0: -1
+        property int bufferAChannel1: -1
+        property int bufferAChannel2: -1
+        property int bufferAChannel3: -1
+        property int bufferBChannel0: -1
+        property int bufferBChannel1: -1
+        property int bufferBChannel2: -1
+        property int bufferBChannel3: -1
+        property int bufferCChannel0: -1
+        property int bufferCChannel1: -1
+        property int bufferCChannel2: -1
+        property int bufferCChannel3: -1
+        property int bufferDChannel0: -1
+        property int bufferDChannel1: -1
+        property int bufferDChannel2: -1
+        property int bufferDChannel3: -1
+        property int bufferSimulationMaxHeight: 0
+        property bool showFps: false
+        property bool showPerformance: false
+        property bool showPerformanceGraph: true
+        property bool performanceExpanded: true
+        property int gpuTdp: 75
+        property bool playlistEnabled: false
+        property var playlistShaders: []
+        property int playlistIntervalMinutes: 10
+        property bool playlistShuffle: false
+        property int playlistSource: 0
+        property bool watchSourceFile: false
+        property bool experimentalScreenUniforms: false
+        property bool experimentalDesktopUniform: false
+        property bool experimentalParallax: false
+        property real experimentalParallaxStrength: 0.25
+        property bool experimentalHdrPipeline: false
+        property bool dither: true
+        property bool enableShaderTweaks: false
+        property bool infoPlasma6Preview_dismissed: false
+        property bool warningResources_dismissed: false
+        property bool emergencyHelp_dismissed: false
+
+    }
+    Wallpaper.ShaderSystem { id: host; wallpaperConfig: config }
+    Nexus.NexusBootstrap { }
+    TestCase {
+        name: "NexusWallpaperHost"
+        when: windowShown
+        function test_normalHostSelectionClickToggleAndCleanup() {
+            const lib = Native.ShaderLibrarySingleton
+            const path = "@PACKAGE@/main.frag"
+            const map = ShaderApply.forPath(lib, path, {})
+            for (const key of Object.keys(map)) if (key in config) config[key] = map[key]
+            config.running = true
+            config.pauseMode = 3
+            config.targetFps = 30
+            config.experimentalScreenUniforms = false
+            tryVerify(function() { return findChild(host, "nexusClassicBridge") !== null }, 6000)
+            let bridge = findChild(host, "nexusClassicBridge")
+            const engine = bridge.engine
+            tryVerify(function() { return engine.iFrame > 1 }, 6000)
+            verify(!engine.hasError && !engine.compileFailed)
+            verify(engine.iChannel3Enabled)
+            compare(bridge.extraCount, 0)
+            mouseClick(host, 500, 200, Qt.LeftButton)
+            compare(bridge.extraCount, 4)
+            config.mouseEnabled = false
+            mouseClick(host, 500, 200, Qt.LeftButton)
+            compare(bridge.extraCount, 4)
+            config.mouseEnabled = true
+            mouseClick(host, 500, 200, Qt.LeftButton)
+            compare(bridge.extraCount, 8)
+            config.selectedShaderPath = "Shaders/CrumpledWave.frag"
+            tryVerify(function() { return findChild(host, "nexusClassicBridge") === null })
+            compare(engine.iChannel3Enabled, false)
+            verify(!engine.hasError && !engine.compileFailed)
+            console.log("Normal wallpaper host: selection, textures, clicks, input toggle, and cleanup passed")
+        }
+    }
+}

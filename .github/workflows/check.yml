@@ -1,0 +1,26 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ python3 qt6-base-dev qt6-declarative-dev
+      - name: Build
+        run: |
+          cmake -S package/NexusClassic/interaction -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 2
+      - name: Test pulse behaviour and shared input
+        run: ctest --test-dir build --output-on-failure
+      - name: Test installer and rollback
+        run: python3 -m unittest discover -s tests -v
